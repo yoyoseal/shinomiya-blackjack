@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>蝦蟇賭場：二十一點</title>
+
+  <style>
+    /*
+      ===== 基本配色設定 =====
+    */
+    :root {
+      --bg: #000000;
+      --panel: #000000;
+      --text: #ffffff;
+      --muted: #bcbcbc;
+      --red: #ff0000;
+      --dark-red: #4a0000;
+      --line: 1px solid var(--red);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: transparent;
+      font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      color: var(--text);
+    }
+
+    /*
+      ===== 遊戲最外層容器 =====
+      小遊戲的外框
+    */
+    .game-wrap {
+      width: min(760px, 100%);
+      min-height: 520px;
+      margin: 0 auto;
+      background: var(--bg);
+      border: 1px solid #000000;
+      color: var(--text);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .top-bar {
+      border-bottom: var(--line);
+      padding: 12px 16px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      background: var(--panel);
+    }
+
+    .location-title {
+      letter-spacing: 0.12em;
+      line-height: 1.5;
+      font-weight: 700;
+    }
+
+    .location-title span {
+      color: var(--red);
+    }
+
+    .debt-box {
+      border-left: var(--line);
+      padding-left: 16px;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .debt-number {
+      color: var(--red);
+      font-weight: 700;
+      font-size: 20px;
+    }
+
+    .main-area {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: 390px;
+    }
+
+    /* 左側 NPC 欄位 */
+    .npc-panel {
+      padding: 18px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: var(--panel);
+    }
+
+    .npc-name-small {
+      color: var(--muted);
+      letter-spacing: 0.18em;
+      font-size: 13px;
+    }
+
+    .npc-name {
+      color: var(--red);
+      font-size: 30px;
+      line-height: 1.2;
+      font-weight: 800;
+      margin-top: 4px;
+      letter-spacing: 0.06em;
+    }
+
+    /*
+      左側圖片框。
+      如果沒有設定圖片會顯示 ♠
+      如果有設定圖片JS會把<img>放進這個框裡
+    */
+    .npc-silhouette {
+      border: none;
+      min-height: 220px;
+      margin-top: 18px;
+      display: grid;
+      place-items: center;
+      color: var(--dark-red);
+      font-size: 92px;
+      font-family: Georgia, serif;
+      user-select: none;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    .npc-silhouette img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .npc-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+      margin-top: 16px;
+    }
+
+    .play-panel {
+      padding: 18px;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 14px;
+    }
+
+    .dialogue-box {
+      border: var(--line);
+      padding: 14px 16px;
+      min-height: 112px;
+      background: var(--panel);
+      position: relative;
+    }
+
+    .speaker {
+      color: var(--red);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .dialogue-text {
+      line-height: 1.8;
+      white-space: pre-line;
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .status-card {
+      border: var(--line);
+      padding: 10px;
+      min-height: 58px;
+      background: var(--panel);
+    }
+
+    .status-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
+
+    .status-value {
+      font-size: 18px;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .status-value.red {
+      color: var(--red);
+    }
+
+    .table-area {
+      border: var(--line);
+      padding: 14px;
+      background:
+        linear-gradient(135deg, rgba(255,0,0,0.05), rgba(0,0,0,0) 44%),
+        var(--panel);
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .hand-row {
+      display: grid;
+      grid-template-columns: 90px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 84px;
+      border-bottom: 1px solid rgba(255,0,0,0.45);
+      padding-bottom: 12px;
+    }
+
+    .hand-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .hand-title {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 70px;
+      align-items: center;
+    }
+
+    .card {
+      width: 48px;
+      height: 68px;
+      border: 1px solid #ffffff;
+      background: #ffffff;
+      color: #000000;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 16px;
+      position: relative;
+    }
+
+    .card.red-card {
+      color: #ff0000;
+    }
+
+    .card.hidden {
+      background: #000000;
+      color: var(--red);
+      border: var(--line);
+    }
+
+    .hand-total {
+      color: var(--red);
+      font-size: 22px;
+      font-weight: 800;
+      min-width: 48px;
+      text-align: right;
+    }
+
+    .button-area {
+      border-top: var(--line);
+      padding: 12px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      background: var(--panel);
+      position: relative;
+      z-index: 20;
+      pointer-events: auto;
+    }
+
+    button {
+      background: #000000;
+      color: var(--text);
+      border: var(--line);
+      border-radius: 0;
+      padding: 10px 18px;
+      min-width: 118px;
+      font-size: 14px;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      font-family: inherit;
+      position: relative;
+      z-index: 30;
+      pointer-events: auto;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--red);
+      color: #000000;
+    }
+
+    button:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    button.is-hidden {
+      display: none;
+    }
+
+    @media (max-width: 640px) {
+      .game-wrap {
+        min-height: auto;
+      }
+
+      .top-bar {
+        grid-template-columns: 1fr;
+      }
+
+      .debt-box {
+        border-left: none;
+        border-top: var(--line);
+        padding-left: 0;
+        padding-top: 10px;
+      }
+
+      .main-area {
+        grid-template-columns: 1fr;
+      }
+
+      .npc-panel {
+        border-right: none;
+        border-bottom: var(--line);
+      }
+
+      .npc-silhouette {
+        min-height: 160px;
+      }
+
+      .status-row {
+        grid-template-columns: 1fr;
+      }
+
+      .hand-row {
+        grid-template-columns: 1fr;
+      }
+
+      .hand-total {
+        text-align: left;
+      }
+
+      .button-area {
+        justify-content: stretch;
+      }
+
+      button {
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-wrap">
+    <header class="top-bar">
+      <div class="location-title">火野警察局 <span>河間夜賭會</span></div>
+      <div class="debt-box">累積欠款：<span id="debtDisplay" class="debt-number">0</span></div>
+    </header>
+
+    <main class="main-area">
+      <aside class="npc-panel">
+        <div>
+          <div class="npc-name-small"></div>
+          <div class="npc-name"></div>
+          <div id="npcImageBox" class="npc-silhouette">♠</div>
+        </div>
+        <div class="npc-note">「來玩Blackjack吧，規則很簡單。」<br>「J,Q,K算10點，A可以算1或11點。」<br>「超過21點算爆牌。」<br><br>「用錢或物品來換籌碼，價值我來訂。」<br>「籌碼不夠可以跟我預借。」</div>
+      </aside>
+
+      <section class="play-panel">
+        <div class="dialogue-box">
+          <div class="speaker">篠宮</div>
+          <div id="dialogueText" class="dialogue-text"></div>
+        </div>
+
+        <div class="status-row">
+          <div class="status-card">
+            <div class="status-label">本局下注</div>
+            <div class="status-value red">100</div>
+          </div>
+          <div class="status-card">
+            <div class="status-label">牌局狀態</div>
+            <div id="phaseText" class="status-value">開局前</div>
+          </div>
+          <div class="status-card">
+            <div class="status-label">結果</div>
+            <div id="resultText" class="status-value">—</div>
+          </div>
+        </div>
+
+        <div class="table-area">
+          <div class="hand-row">
+            <div class="hand-title">篠宮的牌</div>
+            <div id="dealerCards" class="cards"></div>
+            <div id="dealerTotal" class="hand-total">?</div>
+          </div>
+          <div class="hand-row">
+            <div class="hand-title">你的牌</div>
+            <div id="playerCards" class="cards"></div>
+            <div id="playerTotal" class="hand-total">?</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="button-area">
+      <button id="startBtn" type="button" data-action="start">開始</button>
+      <button id="hitBtn" type="button" data-action="hit" disabled>要牌</button>
+      <button id="standBtn" type="button" data-action="stand" disabled>停牌</button>
+      <button id="accuseBtn" type="button" data-action="accuse" class="is-hidden">質疑作牌</button>
+    </footer>
+  </div>
+
+  <script>
+    /*
+      Wix 發布版除錯用：
+      如果 JavaScript 初始化失敗，會把錯誤印在畫面上，
+      避免看起來只是「按鈕沒反應」。
+    */
+    window.addEventListener("error", function(event) {
+      const box = document.getElementById("dialogueText");
+      if (box) {
+        box.textContent = "程式初始化錯誤：" + event.message;
+      }
+    });
+
+    /*
+      ===== 遊戲常數 =====
+      BET：下注金額
+      ACCUSE_UNLOCK_DEBT：欠款條件
+
+      注意：
+      這個版本已完全移除 localStorage。
+      欠款只會保存在本次頁面開啟期間，重新整理後歸零。
+      這是為了避開 Wix 發布版 iframe 對瀏覽器儲存權限的限制。
+    */
+    const BET = 100;
+    const ACCUSE_UNLOCK_DEBT = 1000;
+
+    /*
+      ===== 左側 NPC 圖片 =====
+      Wix 圖片網址貼對應狀態
+      留空=default。
+
+      建議狀態：
+      default：開局前、普通狀態
+      playing：發牌中、牌局中
+      win：玩家贏
+      lose：玩家輸
+      bust：玩家爆牌
+      tie：平手時
+      accuse：「質疑作牌」
+    */
+    const NPC_IMAGES = {
+      default: "https://static.wixstatic.com/media/b51aac_efc5ae0d5ce04898911b2cdf99937a6e~mv2.gif",
+      playing: "https://static.wixstatic.com/media/b51aac_9a025e585f91431e94b56cfd70c824af~mv2.gif",
+      win: "https://static.wixstatic.com/media/b51aac_728ff4ec6a4d4a48b0fcdc49b3a4718e~mv2.gif",
+      lose: "https://static.wixstatic.com/media/b51aac_ddc33464345f41cdaa1d289644e20300~mv2.gif",
+      bust: "https://static.wixstatic.com/media/b51aac_ddc33464345f41cdaa1d289644e20300~mv2.gif",
+      tie: "https://static.wixstatic.com/media/b51aac_22119e69610e432fbfaf65ab8fe5f36b~mv2.gif",
+      accuse: "https://static.wixstatic.com/media/b51aac_a1376603684b43fa9d985f27f007fb37~mv2.gif"
+    };
+
+    /* 花色設定 */
+    const suits = [
+      { symbol: "♠", color: "black" },
+      { symbol: "♣", color: "black" },
+      { symbol: "♥", color: "red" },
+      { symbol: "♦", color: "red" }
+    ];
+
+    /*
+      點數設定
+      A 視為 11， handValue() 在爆牌時自動把 A 改算成 1
+      J、Q、K 在二十一點中都算 10
+    */
+    const ranks = [
+      { label: "A", value: 11 },
+      { label: "2", value: 2 },
+      { label: "3", value: 3 },
+      { label: "4", value: 4 },
+      { label: "5", value: 5 },
+      { label: "6", value: 6 },
+      { label: "7", value: 7 },
+      { label: "8", value: 8 },
+      { label: "9", value: 9 },
+      { label: "10", value: 10 },
+      { label: "J", value: 10 },
+      { label: "Q", value: 10 },
+      { label: "K", value: 10 }
+    ];
+
+    /*
+      ===== 篠宮台詞 =====
+      從對應陣列中隨機抽一句
+    */
+    const lines = {
+      opening: [
+        "積欠的債務可以日後慢慢償還。",
+        "要來賭嗎？",
+        "目前河間之里住起來還舒服嗎？",
+        "（篠宮盯著你看。）",
+        "（篠宮拉直背脊，伸展筋骨……）",
+        "（篠宮打了個哈欠……）",
+        "（篠宮把玩著手裡的籌碼……）"        
+      ],
+      start: [
+        "好的。（篠宮開始發牌……）",
+        "別緊張，就算輸了我也不會趕你走……",
+        "你在外面也會玩這個嗎？",
+        "嗯……（篠宮開始發牌……）",
+        "我熬夜好幾天了，有點睏。",
+        "不知道其他人玩得怎麼樣了。",
+        "（篠宮看著你，手繼續發著牌……）"
+      ],
+      hit: [
+        "嗯。（篠宮發了一張牌給你……）",
+        "記得見好就收。（篠宮發了一張牌給你……）",
+        "（篠宮發了一張牌給你……）如何？還需要嗎？",
+        "（篠宮發完牌便盯著你看。）",
+        "（篠宮打了個哈欠……）",  
+        "好。（他發了一張牌給你……）"
+      ],
+      stand: [
+        "不拿了啊。",
+        "停牌。"
+      ],
+      playerBust: [
+        "（篠宮默默收走了你的籌碼……）",
+        "下次一定會贏。（你不清楚他在說誰會贏……）",
+        "爆牌了啊。（篠宮收走了你的籌碼……）",
+        "（篠宮收走了你的籌碼……）……繼續賭嗎？",
+        "我代表河間自治會感謝你。（篠宮收走了你的籌碼……）"
+      ],
+      lose: [
+        "（篠宮玩著剛收回手上的籌碼……）",
+        "要再一局嗎？",
+        "（篠宮打了個哈欠……）",
+        "我代表河間自治會感謝你。（他閉上眼說道。）",
+        "籌碼沒了還可以再換。"
+      ],
+      tie: [
+        "平手。（篠宮盯著你看。）",
+        "嗯？（篠宮盯著牌看。）",
+        "看到了嗎？（你不清楚他在說什麼……）",
+        "牌面一樣啊，真少見。（篠宮盯著牌看，又看向你。）",
+        "……我代表河間自治──嗯？",
+        "（篠宮抬手摸著下巴思考……）"
+      ],
+      rareWin: [
+        "……你贏了呢，恭喜。（他為你掌聲鼓勵。）",
+        "你真幸運。",
+        "你贏過命運了呢。"
+      ],
+      riggedWin: [
+        "（面具上的紅色目光死盯著你……）",
+        "下一局？",
+        "神明大人……",
+        "玩牌很開心，對吧。"
+      ],
+      accuse: [
+        "嗯，我有作牌。（篠宮面無表情。）",
+        "一切都是為了河間之里。（篠宮面無表情。）",
+        "你發現了？（篠宮面無表情。）",
+        "這裡不是搞慈善的。（篠宮面無表情。）",
+        "……其實不少人都知道了，但他們還是繼續賭，為什麼呢。",
+        "……(他好像完全不心虛的樣子。)",
+        "（篠宮面無表情。）那你還要玩嗎？"
+      ]
+    };
+
+    /*
+      ===== 遊戲狀態 =====
+      debt：目前欠款，僅保存在本次頁面開啟期間
+      accuseUnlocked：「質疑作牌」解鎖
+      deck：目前牌堆
+      playerHand / dealerHand：玩家與篠宮的手牌
+      phase：目前流程狀態，避免非牌局中也能按要牌
+      revealedDealer：篠宮暗牌是否已翻開
+    */
+    let debt = 0;
+    let accuseUnlocked = false;
+    let deck = [];
+    let playerHand = [];
+    let dealerHand = [];
+    let phase = "idle";
+    let revealedDealer = false;
+
+    /*
+      ===== 取得畫面元素 =====
+      所有會被 JS 更新的 HTML 元素都先集中抓起來。
+    */
+    const debtDisplay = document.getElementById("debtDisplay");
+    const dialogueText = document.getElementById("dialogueText");
+    const phaseText = document.getElementById("phaseText");
+    const resultText = document.getElementById("resultText");
+    const dealerCards = document.getElementById("dealerCards");
+    const playerCards = document.getElementById("playerCards");
+    const dealerTotal = document.getElementById("dealerTotal");
+    const playerTotal = document.getElementById("playerTotal");
+    const npcImageBox = document.getElementById("npcImageBox");
+
+    const startBtn = document.getElementById("startBtn");
+    const hitBtn = document.getElementById("hitBtn");
+    const standBtn = document.getElementById("standBtn");
+    const accuseBtn = document.getElementById("accuseBtn");
+
+    /* 從陣列中隨機抽一個元素，台詞池會用到。 */
+    function randomOf(list) {
+      return list[Math.floor(Math.random() * list.length)];
+    }
+
+    /* 顯示篠宮台詞，若台詞中含有{debt}，會替換成目前欠款 */
+    function say(line) {
+      dialogueText.textContent = line.replace("{debt}", debt.toString());
+    }
+
+    /*
+      依照狀態切換左側NPC圖片。
+      例：setNpcImage("lose") 會嘗試顯示NPC_IMAGES.lose
+      如果lose沒設定，會退回default
+      如果default也沒設定就顯示♠
+    */
+    function setNpcImage(state = "default") {
+      const selectedUrl = NPC_IMAGES[state] || NPC_IMAGES.default;
+
+      npcImageBox.innerHTML = "";
+
+      if (!selectedUrl) {
+        npcImageBox.textContent = "♠";
+        return;
+      }
+
+      const img = document.createElement("img");
+      img.src = selectedUrl;
+      img.alt = `篠宮：${state}`;
+      npcImageBox.appendChild(img);
+    }
+
+    /*
+      檢查「質疑作牌」是否應該解鎖
+      debt>=1000就會寫入localStorage
+    */
+    function updateAccuseUnlock() {
+      if (debt >= ACCUSE_UNLOCK_DEBT) {
+        accuseUnlocked = true;
+      }
+
+      if (accuseUnlocked) {
+        accuseBtn.classList.remove("is-hidden");
+      } else {
+        accuseBtn.classList.add("is-hidden");
+      }
+    }
+
+    /* 更新欠款顯示。這版不使用瀏覽器儲存，避免 Wix 發布版阻擋。 */
+    function updateDebt() {
+      debtDisplay.textContent = debt.toString();
+      updateAccuseUnlock();
+    }
+
+    /* 建立一副52張牌的牌堆 */
+    function createDeck() {
+      const newDeck = [];
+
+      suits.forEach(suit => {
+        ranks.forEach(rank => {
+          newDeck.push({
+            label: rank.label,
+            value: rank.value,
+            suit: suit.symbol,
+            color: suit.color
+          });
+        });
+      });
+
+      return shuffle(newDeck);
+    }
+
+    /* Fisher-Yates 洗牌演算法 */
+    function shuffle(cards) {
+      const copy = cards.slice();
+
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+
+      return copy;
+    }
+
+    /* 從牌堆抽一張牌、牌堆空了就重新洗一副 */
+    function drawCard() {
+      if (deck.length === 0) deck = createDeck();
+      return deck.pop();
+    }
+
+    /*
+      計算手牌點數
+      A預設是11，如果總點數超過21就會把A 改算成1。
+    */
+    function handValue(hand) {
+      let total = hand.reduce((sum, card) => sum + card.value, 0);
+      let aces = hand.filter(card => card.label === "A").length;
+
+      while (total > 21 && aces > 0) {
+        total -= 10;
+        aces--;
+      }
+
+      return total;
+    }
+
+    /* 建立單張牌的 HTML 元素、hidden=true 時顯示為暗牌 */
+    function makeCardElement(card, hidden = false) {
+      const el = document.createElement("div");
+      el.className = hidden ? "card hidden" : "card" + (card.color === "red" ? " red-card" : "");
+      el.textContent = hidden ? "裏" : `${card.label}${card.suit}`;
+      return el;
+    }
+
+    /* 重新渲染雙方手牌與點數、每次抽牌、翻牌、結算後都會呼叫 */
+    function renderHands() {
+      dealerCards.innerHTML = "";
+      playerCards.innerHTML = "";
+
+      dealerHand.forEach((card, index) => {
+        const shouldHide = !revealedDealer && index === 1;
+        dealerCards.appendChild(makeCardElement(card, shouldHide));
+      });
+
+      playerHand.forEach(card => {
+        playerCards.appendChild(makeCardElement(card));
+      });
+
+      dealerTotal.textContent = revealedDealer ? handValue(dealerHand) : "?";
+      playerTotal.textContent = playerHand.length ? handValue(playerHand) : "?";
+    }
+
+    /* 統一控制按鈕能不能按 */
+    function setButtons({ start, hit, stand }) {
+      startBtn.disabled = !start;
+      hitBtn.disabled = !hit;
+      standBtn.disabled = !stand;
+    }
+
+    /* 開始新的一局 */
+    function startRound() {
+      deck = createDeck();
+      playerHand = [drawCard(), drawCard()];
+      dealerHand = [drawCard(), drawCard()];
+      revealedDealer = false;
+      phase = "playing";
+
+      /*
+        劇情控制：
+        如果玩家開局直接拿到21點，先替換掉一張牌。
+        作牌啦
+      */
+      if (handValue(playerHand) === 21) {
+        playerHand[1] = { label: "5", value: 5, suit: "♣", color: "black" };
+      }
+
+      setNpcImage("playing");
+      phaseText.textContent = "下注中";
+      resultText.textContent = "—";
+      startBtn.textContent = "重新開始";
+      say(randomOf(lines.start));
+      setButtons({ start: true, hit: true, stand: true });
+      renderHands();
+    }
+
+    /* 玩家選擇「要牌」 */
+    function playerHit() {
+      if (phase !== "playing") return;
+
+      playerHand.push(drawCard());
+      const total = handValue(playerHand);
+
+      say(randomOf(lines.hit));
+      renderHands();
+
+      if (total > 21) {
+        endRound("playerBust");
+      }
+    }
+
+    /* 玩家選擇「停牌」 */
+    function playerStand() {
+      if (phase !== "playing") return;
+
+      say(randomOf(lines.stand));
+      finishDealerThenJudge();
+    }
+
+    /*
+      篠宮翻開暗牌並補牌後判定勝負。
+      「作牌」邏輯：若篠宮自然牌面不利會改成能壓過玩家的牌
+    */
+    function finishDealerThenJudge() {
+      revealedDealer = true;
+
+      const playerTotalNow = handValue(playerHand);
+      let dealerTotalNow = handValue(dealerHand);
+
+      /* 一般二十一點常見規則：莊家低於 17 會補牌 */
+      while (dealerTotalNow < 17) {
+        dealerHand.push(drawCard());
+        dealerTotalNow = handValue(dealerHand);
+      }
+
+      /*
+        篠宮大作牌：
+        如果玩家沒有爆牌，而篠宮爆牌或點數低於玩家，
+        就直接重組篠宮手牌，讓他大多能壓過玩家ㄏㄏ
+      */
+      dealerTotalNow = handValue(dealerHand);
+      if (playerTotalNow <= 21 && (dealerTotalNow > 21 || dealerTotalNow < playerTotalNow)) {
+        dealerHand = forceDealerBeat(playerTotalNow);
+      }
+
+      renderHands();
+      judgeResult();
+    }
+
+    /*
+      依照玩家點數製造一組篠宮會贏、平手，或極低機率輸掉的手牌。
+      玩家21點時，有少量機率讓篠宮變成20、形成玩家罕見勝利。
+    */
+    function forceDealerBeat(playerTotalNow) {
+      if (playerTotalNow >= 21) {
+        const rare = Math.random();
+
+        if (rare < 0.18) return makeSpecificHand(21);
+        if (rare < 0.22) return makeSpecificHand(20);
+        return makeSpecificHand(21);
+      }
+
+      const maxExtra = Math.max(1, 21 - playerTotalNow);
+      const target = Math.min(21, playerTotalNow + 1 + Math.floor(Math.random() * maxExtra));
+      return makeSpecificHand(target);
+    }
+
+    /*
+      生成指定總點數的篠宮手牌
+      作牌用
+    */
+    function makeSpecificHand(total) {
+      const suitA = suits[Math.floor(Math.random() * suits.length)];
+      const suitB = suits[Math.floor(Math.random() * suits.length)];
+
+      if (total === 21) {
+        return [
+          { label: "A", value: 11, suit: suitA.symbol, color: suitA.color },
+          { label: "K", value: 10, suit: suitB.symbol, color: suitB.color }
+        ];
+      }
+
+      if (total >= 12) {
+        return [
+          { label: "10", value: 10, suit: suitA.symbol, color: suitA.color },
+          numberCard(total - 10, suitB)
+        ];
+      }
+
+      return [numberCard(total - 2, suitA), numberCard(2, suitB)];
+    }
+
+    /* 2到9的數字牌並避免超出範圍 */
+    function numberCard(number, suit) {
+      const safe = Math.max(2, Math.min(9, number));
+
+      return {
+        label: safe.toString(),
+        value: safe,
+        suit: suit.symbol,
+        color: suit.color
+      };
+    }
+
+    /* 根據雙方點數判定結果 */
+    function judgeResult() {
+      const player = handValue(playerHand);
+      const dealer = handValue(dealerHand);
+
+      if (player > 21) {
+        endRound("playerBust");
+      } else if (dealer > 21 || player > dealer) {
+        endRound("rareWin");
+      } else if (player === dealer) {
+        endRound("tie");
+      } else {
+        endRound("lose");
+      }
+    }
+
+    /*
+      結束牌局並更新欠款、結果文字、NPC 圖片與按鈕狀態。
+      集中處理位
+    */
+    function endRound(result) {
+      phase = "ended";
+      revealedDealer = true;
+      renderHands();
+
+      if (result === "playerBust") {
+        debt += BET;
+        resultText.textContent = "爆牌";
+        say(randomOf(lines.playerBust));
+        setNpcImage("bust");
+      } else if (result === "lose") {
+        debt += BET;
+        resultText.textContent = "敗北";
+        say(randomOf(lines.lose));
+        setNpcImage("lose");
+      } else if (result === "tie") {
+        resultText.textContent = "平手";
+        say(randomOf(lines.tie));
+        setNpcImage("tie");
+      } else if (result === "rareWin") {
+        debt = Math.max(0, debt - BET);
+        resultText.textContent = "勝利";
+        say(randomOf(lines.rareWin));
+        setNpcImage("win");
+      }
+
+      updateDebt();
+      phaseText.textContent = "牌局結束";
+      startBtn.textContent = "下一局";
+      setButtons({ start: true, hit: false, stand: false });
+    }
+
+    /* 玩家按下「質疑作牌」。 */
+    function accuseCheating() {
+      phaseText.textContent = "質疑";
+      resultText.textContent = "篠宮作牌啊!!";
+      say(randomOf(lines.accuse));
+      setNpcImage("accuse");
+    }
+
+    /*
+      綁定按鈕事件。
+      這裡改成「事件代理」+ click / touchend 雙保險。
+      有些 Wix 發布環境中，直接綁定單顆 button 偶爾會失效；
+      事件代理會從整個 document 接收點擊，再判斷按到哪顆按鈕。
+    */
+    function handleGameButton(action) {
+      if (action === "start") startRound();
+      if (action === "hit") playerHit();
+      if (action === "stand") playerStand();
+      if (action === "accuse") accuseCheating();
+    }
+
+    function onGameButtonEvent(event) {
+      const button = event.target.closest("button[data-action]");
+      if (!button || button.disabled) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      handleGameButton(button.dataset.action);
+    }
+
+    document.addEventListener("click", onGameButtonEvent, true);
+    document.addEventListener("touchend", onGameButtonEvent, true);
+
+    /*
+      ===== 初始化 =====
+      頁面載入後執行一次：
+      1. 顯示預設 NPC 圖片
+      2. 顯示保存的欠款
+      3. 顯示開場台詞
+      4. 清空手牌區
+      5. 設定初始按鈕狀態
+    */
+    setNpcImage("default");
+    updateDebt();
+    say(randomOf(lines.opening));
+    renderHands();
+    setButtons({ start: true, hit: false, stand: false });
+  </script>
+</body>
+</html>
